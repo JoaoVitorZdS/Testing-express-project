@@ -8,8 +8,11 @@ export const ensureChocolateExists = async (
   res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
-  const id = parseInt(req.params.id);
+  let id = parseInt(req.params.id);
 
+  if (req.route.path === "/reviews" && req.method === "POST") {
+    id = req.body.chocolateId;
+  }
   const queryString: string = `
   SELECT
         *
