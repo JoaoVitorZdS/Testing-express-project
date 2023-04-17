@@ -4,6 +4,8 @@ import {
   TChocolateRequest,
   TChocolateSaleInformation,
   TChocolateSaleInformationRequest,
+  TIngredientChocolateCreate,
+  TIngredientChocolateRequest,
 } from "../interfaces/chocolates.interfaces";
 import { QueryConfig, QueryResult } from "pg";
 import { client } from "../database";
@@ -47,7 +49,7 @@ FROM
 	chocolates ch
 LEFT JOIN
 	sale_information si ON ch."id" = si."chocolateId"
-ORDER BY "chocolateId"; ;
+ORDER BY "chocolateId"; 
   `;
 
   const queryResult: QueryResult<TChocolate> = await client.query(queryString);
@@ -113,4 +115,76 @@ export const updateChocolateSaleInformation = async (
   const queryResult: QueryResult<TChocolate> = await client.query(queryConfig);
 
   return res.json(queryResult.rows[0]);
+};
+
+export const createIngredientToChocolate = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const ingredientData: TIngredientChocolateRequest = req.body;
+  const chocolateId: number = parseInt(req.params.id);
+
+  const data: TIngredientChocolateCreate = {
+    ...ingredientData,
+    chocolateId,
+  };
+  const queryStringSelect: string = `
+    SELECT
+        *
+    FROM
+        chocolates_ingredients
+    WHERE
+        "chocolateId" = $1 AND "ingredientId" = $2
+  `;
+
+  const queryConfigSelect: QueryConfig = {
+    text: queryStringSelect,
+    values: [data.chocolateId, data.ingredientId],
+  };
+
+  const queryResultSelect: QueryResult = await client.query(queryConfigSelect);
+
+  if (queryResultSelect.rowCount > 0) {
+    return res.status(409).json({
+      message: "ingredient already exists in this chocolate",
+    });
+  }
+
+  const queryStringInsert: string = format(
+    `
+  INSERT INTO
+	  chocolates_ingredients (%I)
+  VALUES(%L)
+    RETURNING *;
+  `,
+    Object.keys(data),
+    Object.values(data)
+  );
+
+  const queryResultInsert: QueryResult = await client.query(queryStringInsert);
+
+  return res.status(201).json(queryResultInsert.rows[0]);
+};
+
+export const deleteIngredientFromChocolate = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { id: chocolateId, ingredientId } = req.params;
+
+  const queryString: string = `
+    DELETE FROM
+	      chocolates_ingredients 
+    WHERE 
+	      "chocolateId" = $1 AND "ingredientId" = $2
+    `;
+
+  const queryConfig: QueryConfig = {
+    text: queryString,
+    values: [chocolateId, ingredientId],
+  };
+
+  await client.query(queryConfig);
+
+  return res.status(204).send();
 };

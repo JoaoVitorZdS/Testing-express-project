@@ -3,26 +3,46 @@ import { startDatabase } from "./database";
 import {
   createChocolate,
   createChocolateSaleInformations,
+  createIngredientToChocolate,
+  deleteIngredientFromChocolate,
   getChocolates,
   updateChocolateSaleInformation,
 } from "./logics/chocolates.logics";
-import { ensureChocolateExists } from "./middlewares/chocolates.middlewares";
+import {
+  ensureChocolateExists,
+  ensureIngredientExists,
+} from "./middlewares/chocolates.middlewares";
 import { createReview, getReviewsByChocolateId } from "./logics/reviews.logic";
 
 const app: Application = express();
 app.use(express.json());
 
 app.post("/chocolates", createChocolate);
+app.get("/chocolates", getChocolates);
+
 app.post(
   "/chocolates/:id/sale_informations",
   ensureChocolateExists,
   createChocolateSaleInformations
 );
-app.get("/chocolates", getChocolates);
 app.patch(
   "/chocolates/:id/sale_information",
   ensureChocolateExists,
   updateChocolateSaleInformation
+);
+
+app.post(
+  "/chocolates/:id/ingredients",
+  ensureChocolateExists,
+  ensureIngredientExists,
+  createIngredientToChocolate
+);
+
+app.delete(
+  "/chocolates/:id/ingredients/:ingredientId",
+  ensureChocolateExists,
+  ensureIngredientExists,
+  deleteIngredientFromChocolate
 );
 
 app.post("/reviews", ensureChocolateExists, createReview);
